@@ -43,11 +43,17 @@ export function formatMoney(n, currency = "USD", locale = "en-US") {
 }
 
 const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+// Quoting alone does not stop a spreadsheet from running a cell that starts with = + - @, so text cells get a leading apostrophe.
+const csvField = (v) => {
+  if (typeof v === "number") return esc(v);
+  const s = String(v ?? "");
+  return esc(/^[=+\-@\t\r]/.test(s) ? "'" + s : s);
+};
 export function toCSV(invoices) {
   const head = ["type", "number", "client", "issueDate", "dueDate", "status", "currency", "total", "withheld", "paid", "balance"];
   const rows = invoices.map((i) =>
     [i.type === "quote" ? "quote" : "invoice", i.number, i.client, i.issueDate, i.dueDate, i.status, i.currency,
-     totalOf(i), withheldOf(i), Number(i.paid) || 0, balanceOf(i)].map(esc).join(",")
+     totalOf(i), withheldOf(i), Number(i.paid) || 0, balanceOf(i)].map(csvField).join(",")
   );
   return [head.join(","), ...rows].join("\n");
 }
@@ -176,7 +182,7 @@ export function runRecurring(invoices, today, newId) {
     let guard = 0;
     while (inv.nextRun <= today && guard++ < 12) {
       list.unshift({
-        ...inv, id: newId(), number: nextInvoiceNumber(list), issueDate: inv.nextRun,
+        ...inv, id: newId(), number: nextNumber(list, "invoice"), issueDate: inv.nextRun,
         dueDate: addDays(inv.nextRun, terms), status: "draft", paid: 0, payments: [], recur: "", nextRun: "",
         items: inv.items.map((x) => ({ ...x })),
       });
@@ -578,6 +584,6 @@ export function statement(invoices, client, currency, today = new Date().toISOSt
 }
 export function statementCSV(st) {
   const head = ["number", "issueDate", "dueDate", "total", "withheld", "paid", "balance"];
-  const rows = st.rows.map((r) => [r.number, r.issueDate, r.dueDate, r.total, r.withheld, r.paid, r.balance].map(esc).join(","));
+  const rows = st.rows.map((r) => [r.number, r.issueDate, r.dueDate, r.total, r.withheld, r.paid, r.balance].map(csvField).join(","));
   return [head.join(","), ...rows].join("\n");
 }

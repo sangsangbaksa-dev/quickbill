@@ -200,7 +200,14 @@ export function parseCSV(text) {
   return rows;
 }
 export function toCSV(rows) {
-  return rows.map((r) => r.map((v) => (/[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(",")).join("\n");
+  // A text cell that starts with = + - @ gets an apostrophe so spreadsheets show it as text, not a formula.
+  // Numbers such as -5 are left alone.
+  const cell = (v) => {
+    let s = String(v);
+    if (/^[=+\-@\t\r]/.test(s) && !Number.isFinite(Number(s))) s = "'" + s;
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return rows.map((r) => r.map(cell).join(",")).join("\n");
 }
 
 // Grid <-> cells map

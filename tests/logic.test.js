@@ -345,3 +345,34 @@ test("client statement: ledger rows, totals, skips drafts and quotes", () => {
   assert.equal(L.statementCSV(s).split("\n").length, 3);
   assert.equal(L.statement([], "x", "USD").rows.length, 0);
 });
+
+test("csv neutralises spreadsheet formulas in text cells", () => {
+  const csv = L.toCSV([{ number: "INV-1", client: '=HYPERLINK("http://x","go")', items: [{ qty: 1, price: 5 }], currency: "USD", status: "sent" }]);
+  assert.match(csv, /"'=HYPERLINK/);
+  assert.doesNotMatch(csv, /^[^"]*,=/m);
+  const st = L.statement([{ number: "+1", client: "@A", currency: "USD", issueDate: "2026-01-01", dueDate: "2026-02-01", status: "sent", items: [{ qty: 1, price: 5 }] }], "@A", "USD", "2026-03-01");
+  assert.match(L.statementCSV(st), /"'\+1"/);
+});
+test("recurring invoices number from invoices, not quotes", () => {
+  const quote = { id: "q", type: "quote", number: "QUO-0009", issueDate: "2024-01-01", dueDate: "2024-01-15", items: [], currency: "USD", status: "sent", paid: 0 };
+  const rec = { id: "r", number: "INV-0001", client: "A", currency: "USD", issueDate: "2024-01-01", dueDate: "2024-01-31", status: "sent", paid: 0, items: [{ qty: 1, price: 5 }], recur: "monthly", nextRun: "2024-02-01" };
+  let n = 0;
+  const { invoices } = L.runRecurring([quote, rec], "2024-02-01", () => "g" + ++n);
+  const made = invoices.find((i) => i.id !== "q" && i.id !== "r");
+  assert.equal(made.number, "INV-0002");
+});
+
+test("csv neutralises spreadsheet formulas in text cells", () => {
+  const csv = L.toCSV([{ number: "INV-1", client: '=HYPERLINK("http://x","go")', items: [{ qty: 1, price: 5 }], currency: "USD", status: "sent" }]);
+  assert.match(csv, /"'=HYPERLINK/);
+  const st = L.statement([{ number: "+1", client: "@A", currency: "USD", issueDate: "2026-01-01", dueDate: "2026-02-01", status: "sent", items: [{ qty: 1, price: 5 }] }], "@A", "USD", "2026-03-01");
+  assert.match(L.statementCSV(st), /"'\+1"/);
+});
+test("recurring invoices number from invoices, not quotes", () => {
+  const quote = { id: "q", type: "quote", number: "QUO-0009", issueDate: "2024-01-01", dueDate: "2024-01-15", items: [], currency: "USD", status: "sent", paid: 0 };
+  const rec = { id: "r", number: "INV-0001", client: "A", currency: "USD", issueDate: "2024-01-01", dueDate: "2024-01-31", status: "sent", paid: 0, items: [{ qty: 1, price: 5 }], recur: "monthly", nextRun: "2024-02-01" };
+  let n = 0;
+  const { invoices } = L.runRecurring([quote, rec], "2024-02-01", () => "g" + ++n);
+  const made = invoices.find((i) => i.id !== "q" && i.id !== "r");
+  assert.equal(made.number, "INV-0002");
+});

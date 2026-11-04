@@ -54,3 +54,9 @@ test("cells <-> rows and invoice lines", () => {
   assert.deepEqual(S.trimRows([["a", "", ""], ["b", "c", ""], ["", "", ""]]), [["a", ""], ["b", "c"]]);
   assert.equal(S.computedRows(cells, 3, 3)[2][2], "120");
 });
+test("sheet csv export keeps text formulas inert", () => {
+  assert.equal(S.toCSV([["=1+1", "-5", "+x", "ok"]]), "'=1+1,-5,'+x,ok");
+});
+test("sheet csv export keeps text formulas inert", () => {
+  assert.equal(S.toCSV([["=1+1", "-5", "+x", "ok"]]), "'=1+1,-5,'+x,ok");
+});
