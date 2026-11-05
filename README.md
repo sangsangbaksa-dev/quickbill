@@ -11,6 +11,7 @@ billing, CSV export, client ledger and overdue ageing.
 - Invoices and quotes (QUO- numbering); a quote converts to an invoice in one click.
 - Tax, discount, deposits and part-payments; status follows the balance.
 - Late fees (per started 30 days) and a copy-paste payment reminder per language.
+- AI reminder draft (optional): for an overdue invoice, the editor's "AI analysis" panel shows the reminder template (the same text as "Copy reminder") and can ask Claude Haiku (`claude-haiku-5-5`) for a more polished draft. The request is sent only when you press "Draft with AI", and only with your own Anthropic API key, saved on this device under `quickbill-ai-key`. The key is not in backups or cloud sync. The request carries the client name, invoice number, amount due, due date, days overdue and your name, all typed text is sanitised first. Line items, payment details and links are not sent. The draft is text you can edit before you copy it; the app never sends it. `reminderPrompt`, `aiRequest` and `parseAiReply` in `logic.js`; the panel is in `app.js`.
 - Dashboard per currency, ageing buckets, per-client ledger.
 - Timer that turns tracked hours into invoice lines.
 - Sheets: a formula grid (SUM, AVERAGE, MIN, MAX, COUNT, ROUND, ABS, IF, cell references), CSV import/export, fill from invoices, rows to invoice. `sheet.js` is the engine; formulas are parsed by hand, no eval.
@@ -38,8 +39,8 @@ Put your checkout link in `config.js`, deploy the folder to any static host, and
 made with `makeLicense()` in `logic.js`. The key check runs client-side, so treat it as a courtesy lock.
 
 ## Development
-- `npm test` runs the unit tests (`node --test`).
-- `python3 -m http.server 8123` then `node tests/e2e.cjs` runs the browser test (needs Playwright).
+- `npm test` runs the unit tests (`node --test`), including `tests/ai.test.js` for the AI reminder draft.
+- `node tests/serve.cjs` (port 8123, same security headers as production) then `node tests/e2e.cjs` runs the browser test (needs Playwright). `node tests/e2e-ai.cjs` covers the AI reminder draft with a stubbed API.
 
 ## Brand assets
 

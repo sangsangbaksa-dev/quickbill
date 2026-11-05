@@ -136,6 +136,26 @@
         <button type="button" id="btn-back" data-i18n="back"></button>
       </div>
     </form>
+    <section id="ai-remind" class="ai-panel noprint" aria-labelledby="ai-h" hidden>
+      <h3 id="ai-h" data-i18n="aiH"></h3>
+      <p class="muted" data-i18n="aiSub"></p>
+      <label><span data-i18n="aiDraft"></span><textarea id="ai-draft" rows="6"></textarea></label>
+      <div class="row"><button type="button" id="ai-copy" data-i18n="aiCopy"></button></div>
+      <div id="ai-keyed" hidden>
+        <p class="muted" data-i18n="aiKeySaved"></p>
+        <div class="row">
+          <button type="button" id="ai-run" class="primary" data-i18n="aiRun"></button>
+          <button type="button" id="ai-forget" data-i18n="aiKeyForget"></button>
+        </div>
+        <p class="muted" data-i18n="aiSent"></p>
+      </div>
+      <div id="ai-nokey" hidden>
+        <label><span data-i18n="aiKeyInput"></span><input type="password" id="ai-key" autocomplete="off" spellcheck="false"></label>
+        <div class="row"><button type="button" id="ai-save" data-i18n="aiKeySave"></button></div>
+        <p class="muted" data-i18n="aiKeyHint"></p>
+      </div>
+      <p id="ai-status" class="muted" role="status" aria-live="polite"></p>
+    </section>
     <article id="preview"></article>
   </section>
 </div>

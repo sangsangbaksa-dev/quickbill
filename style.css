@@ -242,3 +242,5 @@ section>h2.h{margin:1.8rem 0 .5rem}
 #activity td{overflow-wrap:anywhere}
 #preview,.sheet-paper,#stmt-doc{color-scheme:light}
 #preview .terms,.vw-terms{margin-top:.8rem;font-size:.92rem}
+.ai-panel{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--rule)}
+.ai-panel .row{margin-top:.6rem}

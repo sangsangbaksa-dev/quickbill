@@ -26,6 +26,17 @@ const cloud = globalThis.CloudSync?.create({
 });
 
 const $ = (s) => document.querySelector(s);
+
+// ---- AI reminder draft (optional). The key lives only in this browser; nothing is sent unless the AI button is pressed.
+const AI_KEY = "quickbill-ai-key";
+const AI_URL = "https://api.anthropic.com/v1/messages";
+const aiKey = {
+  get() { try { return localStorage.getItem(AI_KEY) || ""; } catch { return ""; } },
+  set(k) { try { localStorage.setItem(AI_KEY, k); return true; } catch { return false; } },
+  clear() { try { localStorage.removeItem(AI_KEY); } catch {} },
+};
+let draftSource = "local"; // "local" template, "ai" reply, or "user" edits; only "local" follows the form
+let aiBusy = false;
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); if (SYNCED.has(k)) cloud?.changed(); return true; } catch { $("#store-warn").hidden = false; return false; } },
@@ -256,6 +267,7 @@ function renderPreview() {
   const late = L.overdue({ ...i, paid: L.isQuote(i) ? 0 : i.paid }, today());
   $("#btn-latefee").hidden = !late;
   $("#btn-remind").hidden = !late;
+  drawAi(i, late);
   $("#btn-share").hidden = !i.number;
   $("#btn-email").hidden = !CL.validEmail(i.clientEmail);
   // Sticky strip at the top of the editor: totals always in view, plus the late fee the button would add today.
@@ -314,6 +326,7 @@ $("#taxpresets").innerHTML = L.TAX_PRESETS.map((r) => `<option value="${r}">`).j
 
 function openEditor(inv) {
   editing = inv;
+  draftSource = "local";
   $("#catalog").innerHTML = CAT.suggestions(catalog).map((x) => `<option value="${esc(x.desc)}"></option>`).join("");
   for (const el of $("#form").elements) if (el.name) el.value = inv[el.name] ?? "";
   $("#items").replaceChildren(...inv.items.map(itemRow));
@@ -448,6 +461,74 @@ $("#btn-remind").onclick = async () => {
   try { await navigator.clipboard.writeText(text); toast(I.t("reminderCopied")); }
   catch { window.prompt(I.t("reminder"), text); }
 };
+// ---- AI reminder draft: the local template is always there; the model is asked only from the button.
+function localDraft(i) {
+  return I.t("reminderText", { client: i.client, number: i.number, amount: money(L.balanceOf(i), i.currency), date: I.formatDate(i.dueDate), from: i.from });
+}
+function setAiStatus(msg) { $("#ai-status").textContent = msg; }
+function drawAi(i, late) {
+  $("#ai-remind").hidden = !late;
+  if (!late) return;
+  const keyed = !!aiKey.get();
+  $("#ai-keyed").hidden = !keyed;
+  $("#ai-nokey").hidden = keyed;
+  $("#ai-run").disabled = aiBusy;
+  if (draftSource === "local") $("#ai-draft").value = localDraft(i);
+}
+$("#ai-draft").addEventListener("input", () => { draftSource = "user"; });
+$("#ai-save").onclick = () => {
+  const k = $("#ai-key").value.trim();
+  if (!L.isPlausibleKey(k)) return setAiStatus(I.t("aiKeyBad"));
+  if (!aiKey.set(k)) return setAiStatus(I.t("storeWarn"));
+  $("#ai-key").value = "";
+  setAiStatus(I.t("aiKeySaved"));
+  renderPreview();
+};
+$("#ai-forget").onclick = () => { aiKey.clear(); setAiStatus(""); renderPreview(); };
+$("#ai-copy").onclick = async () => {
+  const text = $("#ai-draft").value;
+  if (!text) return;
+  try { await navigator.clipboard.writeText(text); setAiStatus(I.t("aiCopied")); }
+  catch { window.prompt(I.t("aiCopy"), text); }
+};
+$("#ai-run").onclick = async () => {
+  const key = aiKey.get();
+  if (!key || aiBusy) return;
+  const inv = L.settle(readForm());
+  if (!L.overdue(inv, today())) return setAiStatus(I.t("aiNotOverdue"));
+  const body = L.aiRequest(L.reminderPrompt({
+    client: inv.client, number: inv.number, amount: money(L.balanceOf(inv), inv.currency), dueDate: inv.dueDate,
+    daysOverdue: L.daysOverdueOf(inv, today()), from: inv.from, lang: I.getLang()
+  }));
+  aiBusy = true; $("#ai-run").disabled = true; setAiStatus(I.t("aiBusy"));
+  const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = setTimeout(() => ctrl?.abort(), 30000);
+  let status = 0, reply = null, failed = false;
+  try {
+    const res = await fetch(AI_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify(body), referrerPolicy: "no-referrer", signal: ctrl?.signal
+    });
+    status = res.status;
+    reply = await res.json().catch(() => null);
+  } catch { failed = true; }
+  clearTimeout(timer);
+  aiBusy = false;
+  $("#ai-run").disabled = false;
+  if (failed) return setAiStatus(I.t("aiErrNet"));
+  if (status === 401 || status === 403) return setAiStatus(I.t("aiErrKey", { s: status }));
+  if (status < 200 || status > 299) return setAiStatus(I.t("aiErrHttp", { s: status }));
+  let text = "";
+  try { text = L.parseAiReply(reply); } catch { return setAiStatus(I.t("aiErrReply")); }
+  $("#ai-draft").value = text;
+  draftSource = "ai";
+  setAiStatus(I.t("aiDone"));
+};
+
 // The new row takes focus, so keyboard users can type the description straight away.
 $("#btn-add").onclick = () => {
   const row = itemRow();
