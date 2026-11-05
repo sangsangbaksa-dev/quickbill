@@ -20,6 +20,12 @@ test("round trip keeps money, text and unicode intact", () => {
   assert.equal(L.balanceOf(r.inv), L.balanceOf(inv()));
   assert.equal(r.inv.payLink, "https://pay.example.com/i/7");
 });
+test("terms note travels in the link and is capped", () => {
+  const r = S.decodeShare(S.encodeShare({ ...inv(), terms: "Net 14 — 감사" }, "en"));
+  assert.equal(r.inv.terms, "Net 14 — 감사");
+  assert.equal(S.decodeShare(S.encodeShare(inv(), "en")).inv.terms, "");
+  assert.equal(S.decodeShare(S.encodeShare({ ...inv(), terms: "x".repeat(900) }, "en")).inv.terms.length, 600);
+});
 test("payload is url-safe", () => {
   assert.match(S.encodeShare(inv(), "en"), /^[A-Za-z0-9_-]+$/);
 });
