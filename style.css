@@ -255,3 +255,8 @@ select,input:not([type=checkbox]):not([type=radio]):not(.num){min-height:var(--t
 .bar h1 a{display:inline-flex;align-items:center;min-height:var(--tap)}
 @media(pointer:coarse){button,.btn{height:var(--tap)}}
 @media(max-width:480px){.bar{gap:.5rem .6rem}.bar h1{margin-right:auto}main{padding:1.1rem 1rem 3rem}}
+
+/* Site pattern pass: app footer with brand, data note and copyright. */
+.app-foot{max-width:1100px;margin:0 auto;padding:1.1rem 1.2rem 2rem;border-top:1px solid var(--rule);color:var(--mute);font-size:.9rem;display:flex;flex-wrap:wrap;gap:.3rem 1rem;align-items:baseline}
+.app-foot .brand{font-family:var(--serif);color:var(--ink);font-size:1.1rem}
+.app-foot span{flex:1 1 16rem}
