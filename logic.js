@@ -10,13 +10,16 @@ export function round2(n) {
 // withholdingRate: tax the client holds back and pays to the tax office for you (e.g. 3.3% in Korea, 10.21% in Japan).
 // It is a share of the amount before tax, so it never changes `total`; `payable` is what actually reaches you.
 export const MAX_WITHHOLDING = 50;
+// Common VAT / GST / sales-tax rates offered as suggestions on the tax field. Any other rate can still be typed.
+export const TAX_PRESETS = [0, 5, 7, 8, 10, 13, 15, 19, 20, 21, 25];
 export function calcTotals(items, taxRate = 0, discount = 0, withholdingRate = 0) {
   const subtotal = round2(
     items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.price) || 0), 0)
   );
   const disc = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
   const taxable = subtotal - disc;
-  const tax = round2(taxable * ((Number(taxRate) || 0) / 100));
+  // A negative rate would make the tax, and so the total, go below the taxable amount; clamp like the withholding rate.
+  const tax = round2(taxable * (Math.max(Number(taxRate) || 0, 0) / 100));
   const wr = Math.min(Math.max(Number(withholdingRate) || 0, 0), MAX_WITHHOLDING);
   const withholding = round2(taxable * (wr / 100));
   const total = round2(taxable + tax);
@@ -441,6 +444,31 @@ export function removePayment(inv, index) {
   const gone = list[index];
   const wasPaid = inv.status === "paid";
   return { ...inv, paid: Math.max(0, round2((Number(inv.paid) || 0) - gone.amount)), payments: list.filter((_, k) => k !== index), status: wasPaid ? "sent" : inv.status };
+}
+
+// Sets one status on the chosen invoices. Invoices take draft / sent / paid; quotes take draft / sent / accepted.
+// Anything else leaves the document alone. settle() keeps paid amount and status in step, as in the editor.
+export function bulkStatus(invoices, ids, status) {
+  const pick = new Set(ids);
+  return invoices.map((i) => {
+    if (!pick.has(i.id)) return i;
+    const ok = isQuote(i) ? ["draft", "sent", "accepted"] : ["draft", "sent", "paid"];
+    return ok.includes(status) ? settle({ ...i, status }) : i;
+  });
+}
+
+// Newest first: payments received and invoices or quotes issued (drafts are not activity). Payments without a valid date are skipped.
+export function recentActivity(invoices, n = 8) {
+  const rows = [];
+  for (const i of invoices) {
+    if (i.status !== "draft" && validDate(i.issueDate)) {
+      rows.push({ kind: isQuote(i) ? "quote" : "issued", date: i.issueDate, number: i.number, client: i.client, currency: i.currency || "USD", amount: totalOf(i) });
+    }
+    if (!isQuote(i)) for (const p of i.payments || []) {
+      if (validDate(p.date)) rows.push({ kind: "payment", date: p.date, number: i.number, client: i.client, currency: i.currency || "USD", amount: Number(p.amount) || 0 });
+    }
+  }
+  return rows.sort((a, b) => b.date.localeCompare(a.date) || String(b.number).localeCompare(String(a.number))).slice(0, n);
 }
 
 // How fast people pay: only invoices that are fully paid and have at least one dated payment.

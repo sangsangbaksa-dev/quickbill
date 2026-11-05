@@ -10,6 +10,38 @@ test("discount cannot exceed subtotal; bad input is safe", () => {
   assert.equal(L.calcTotals([{ qty: 1, price: 10 }], 0, 999).total, 0);
   assert.equal(L.calcTotals([{ qty: "x", price: null }]).total, 0);
 });
+test("bulk status: only allowed statuses change, paid is settled, input is not mutated", () => {
+  const list = [
+    { id: "a", type: "invoice", number: "INV-1", client: "A", currency: "USD", issueDate: "2026-01-01", dueDate: "2026-02-01", status: "sent", paid: 0, items: [{ qty: 1, price: 50 }] },
+    { id: "q", type: "quote", number: "QUO-1", client: "A", currency: "USD", issueDate: "2026-01-01", dueDate: "2026-02-01", status: "sent", paid: 0, items: [{ qty: 1, price: 50 }] },
+  ];
+  const out = L.bulkStatus(list, ["a", "q"], "paid");
+  assert.equal(out[0].status, "paid");
+  assert.equal(out[0].paid, 50);
+  assert.equal(out[1], list[1]); // a quote does not take "paid"
+  assert.equal(L.bulkStatus(list, ["q"], "accepted")[1].status, "accepted");
+  assert.equal(list[0].status, "sent");
+  assert.equal(L.bulkStatus(list, [], "paid")[0], list[0]);
+});
+test("recent activity: payments and issues newest first, drafts left out", () => {
+  const list = [
+    { id: "a", type: "invoice", number: "INV-1", client: "Acme", currency: "USD", issueDate: "2026-03-01", dueDate: "2026-03-15", status: "sent", paid: 20, payments: [{ date: "2026-03-10", amount: 20 }], items: [{ qty: 1, price: 50 }] },
+    { id: "b", type: "invoice", number: "INV-2", client: "Bee", currency: "USD", issueDate: "2026-03-05", dueDate: "2026-03-19", status: "draft", paid: 0, payments: [], items: [{ qty: 1, price: 10 }] },
+    { id: "c", type: "quote", number: "QUO-1", client: "Cee", currency: "USD", issueDate: "2026-03-02", dueDate: "2026-04-01", status: "sent", paid: 0, items: [{ qty: 1, price: 5 }] },
+  ];
+  const rows = L.recentActivity(list);
+  assert.deepEqual(rows.map((r) => [r.kind, r.number]), [["payment", "INV-1"], ["quote", "QUO-1"], ["issued", "INV-1"]]);
+  assert.equal(rows[0].amount, 20);
+  assert.equal(rows[2].amount, 50);
+  assert.equal(L.recentActivity(list, 1).length, 1);
+});
+test("tax presets are sorted, unique and within the tax field's range", () => {
+  const p = L.TAX_PRESETS;
+  assert.ok(p.length > 0);
+  assert.deepEqual([...p].sort((a, b) => a - b), p);
+  assert.equal(new Set(p).size, p.length);
+  assert.ok(p.every((r) => r >= 0 && r < 100));
+});
 test("invoice numbering", () => {
   assert.equal(L.nextInvoiceNumber([]), "INV-0001");
   assert.equal(L.nextInvoiceNumber([{ number: "INV-0009" }, { number: "INV-0002" }]), "INV-0010");

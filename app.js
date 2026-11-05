@@ -32,8 +32,13 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 try { ensureSchema(localStorage); } catch {}
-let invoices = store.get("qb.invoices", []);
+// A stored value that is not a list would crash every screen; keep a copy of it and start from an empty list instead.
+const rawInvoices = store.get("qb.invoices", []);
+if (!Array.isArray(rawInvoices)) { try { localStorage.setItem("qb.invoices.bad", JSON.stringify(rawInvoices)); } catch {} }
+let invoices = Array.isArray(rawInvoices) ? rawInvoices : [];
 let filters = { q: "", f: "all" };
+let selected = new Set(); // ids ticked in the list, for bulk status changes (not saved)
+let shownIds = []; // ids currently visible in the list; bulk changes only touch these
 try { localStorage.setItem("qb.probe", "1"); localStorage.removeItem("qb.probe"); } catch { document.addEventListener("DOMContentLoaded", () => ($("#store-warn").hidden = false)); }
 let license = store.get("qb.license", "");
 let logo = store.get("qb.logo", "");
@@ -64,16 +69,19 @@ function renderList() {
     .map((c) => `<option value="${esc(c)}">`).join("");
   $("#filters").hidden = invoices.length < 4;
   const shown = invoices.length < 4 ? invoices : L.filterInvoices(invoices, filters, today());
+  shownIds = shown.map((i) => i.id);
   $("#nomatch").hidden = !(invoices.length && !shown.length);
   $("#list").innerHTML = shown.map((i) => {
     const q = L.isQuote(i), bal = L.balanceOf(i);
-    return `<div class="card" data-id="${esc(i.id)}" role="button" tabindex="0"><div><b>${esc(i.number)}</b> · ${esc(i.client)}<br>
+    return `<div class="cardrow"><span class="selbox"><input type="checkbox" data-sel="${esc(i.id)}"${selected.has(i.id) ? " checked" : ""} aria-label="${esc(I.t("selAria"))} ${esc(i.number)}"></span><div class="card" data-id="${esc(i.id)}" role="button" tabindex="0"><div><b>${esc(i.number)}</b> · ${esc(i.client)}<br>
       <span class="muted">${q ? I.t("validUntil") : I.t("dueWord")} ${esc(I.formatDate(i.dueDate))} · ${I.t(i.status)}${i.recur ? " · " + I.t(i.recur) : ""}</span>
       ${L.overdue(i) ? `<span class="late"> ${I.t("overdue")}</span>` : ""}</div>
-      <div class="r"><b>${money(L.totalOf(i), i.currency)}</b>${L.withheldOf(i) > 0 ? `<br><span class="muted">${I.t("payableL")} ${money(L.payableOf(i), i.currency)}</span>` : ""}${!q && i.paid > 0 && bal > 0 ? `<br><span class="muted">${I.t("balance")} ${money(bal, i.currency)}</span>` : ""}</div></div>`;
+      <div class="r"><b>${money(L.totalOf(i), i.currency)}</b>${L.withheldOf(i) > 0 ? `<br><span class="muted">${I.t("payableL")} ${money(L.payableOf(i), i.currency)}</span>` : ""}${!q && i.paid > 0 && bal > 0 ? `<br><span class="muted">${I.t("balance")} ${money(bal, i.currency)}</span>` : ""}</div></div></div>`;
   }).join("");
   renderDash();
   renderAgeing();
+  renderActivity();
+  renderBulk();
 }
 
 function renderDash() {
@@ -132,8 +140,27 @@ function renderAgeing() {
     ${rows.map((r) => `<tr><td>${esc(r.currency)}</td>${["d30", "d60", "d90", "older"].map((k) => `<td class="r">${money(r[k], r.currency)}</td>`).join("")}</tr>`).join("")}</table></details>`;
 }
 
+// Recent payments and issues, newest first. Derived from the saved invoices, so nothing extra is stored.
+function renderActivity() {
+  const rows = L.recentActivity(invoices);
+  $("#activity").innerHTML = !rows.length ? "" : `<details open><summary>${I.t("actHead")}</summary><table class="mini">${rows.map((r) => {
+    const key = r.kind === "payment" ? "actPaid" : r.kind === "quote" ? "actQuote" : "actIssued";
+    return `<tr><td class="muted">${esc(I.formatDate(r.date))}</td><td>${esc(I.t(key, { n: r.number, amount: money(r.amount, r.currency) }))}</td><td class="r">${esc(r.client)}</td></tr>`;
+  }).join("")}</table></details>`;
+}
+// Keeps the bulk bar in step with the ticked boxes; forgets ids that no longer exist.
+function renderBulk() {
+  const known = new Set(invoices.map((i) => i.id));
+  for (const id of [...selected]) if (!known.has(id)) selected.delete(id);
+  // Only rows on screen count: a ticked row hidden by the search or filter is not changed by Apply.
+  const n = activeSel().length;
+  $("#bulk").hidden = !n;
+  $("#bulk-n").textContent = I.t("bulkCount", { n });
+}
+function activeSel() { return [...selected].filter((id) => shownIds.includes(id)); }
+
 // ---- time tracker ----
-let entries = store.get("qb.time", []);
+let entries = Array.isArray(store.get("qb.time", [])) ? store.get("qb.time", []) : [];
 let running = store.get("qb.timer", null); // { client, desc, at }
 let rate = store.get("qb.rate", 0);
 let tick;
@@ -165,7 +192,8 @@ $("#t-toggle").onclick = () => {
   }
   renderTime();
 };
-$("#t-rate").onchange = (e) => { rate = Number(e.target.value) || 0; store.set("qb.rate", rate); };
+// A typed negative rate would bill negative hours; clamp it and show the value that is actually used.
+$("#t-rate").onchange = (e) => { rate = Math.max(0, Number(e.target.value) || 0); e.target.value = rate; store.set("qb.rate", rate); };
 $("#t-list").onclick = (e) => {
   const b = e.target.closest("[data-bill]");
   if (!b) return;
@@ -230,6 +258,9 @@ function renderPreview() {
   $("#btn-remind").hidden = !late;
   $("#btn-share").hidden = !i.number;
   $("#btn-email").hidden = !CL.validEmail(i.clientEmail);
+  // Sticky strip at the top of the editor: totals always in view, plus the late fee the button would add today.
+  const fee = !L.isQuote(i) && late ? L.lateFeeAmount({ ...i, items: i.items.filter((x) => !x.lateFee) }, today(), i.lateFeePct) : 0;
+  $("#sticky").innerHTML = `<span>${I.t("total")} <b>${m(t.total)}</b></span>${L.isQuote(i) ? "" : `<span>${I.t("balance")} <b>${m(L.balanceOf(i))}</b></span>`}${fee ? `<span class="late">${I.t("lateFeeNow")} ${m(fee)}</span>` : ""}`;
   const showLogo = logo && isPro();
   $("#btn-logo-rm").hidden = !logo;
   $("#preview").innerHTML = `${showLogo ? `<img class="logo" alt="" src="${esc(logo)}">` : ""}<h2>${I.t(L.isQuote(i) ? "quote" : "invoice")} ${esc(i.number)}</h2>
@@ -238,7 +269,7 @@ function renderPreview() {
     <table><tr><th>${I.t("desc")}</th><th class="r">${I.t("qty")}</th><th class="r">${I.t("price")}</th><th class="r">${I.t("total")}</th></tr>
     ${i.items.map((x) => `<tr><td>${esc(x.desc)}</td><td class="r">${x.qty}</td><td class="r">${m(x.price)}</td><td class="r">${m(x.qty * x.price)}</td></tr>`).join("")}</table>
     <p class="r">${I.t("subtotal")} ${m(t.subtotal)}<br>${t.discount ? `${I.t("discountL")} −${m(t.discount)}<br>` : ""}${I.t("taxL")} ${m(t.tax)}<br><b>${I.t("total")} ${m(t.total)}</b>${t.withholding ? `<br>${I.t("whL")} (${i.withholdingRate}%) −${m(t.withholding)}<br><b>${I.t("payableL")} ${m(t.payable)}</b>` : ""}${!L.isQuote(i) && i.paid > 0 ? `<br>− ${m(Math.min(i.paid, t.payable))}<br><b>${I.t("balance")} ${m(L.balanceOf(i))}</b>` : ""}</p>
-    <p>${esc(i.notes)}</p>${i.payinfo ? `<p><b>${I.t("payinfo").replace(/\s*[（(].*$/, "")}</b><br>${esc(i.payinfo).replace(/\n/g, "<br>")}</p>` : ""}
+    <p>${esc(i.notes)}</p>${i.terms ? `<p class="terms"><b>${I.t("termsL")}</b><br>${esc(i.terms).replace(/\n/g, "<br>")}</p>` : ""}${i.payinfo ? `<p><b>${I.t("payinfo").replace(/\s*[（(].*$/, "")}</b><br>${esc(i.payinfo).replace(/\n/g, "<br>")}</p>` : ""}
     ${isPro() ? "" : `<p class="wm">${I.t("watermark")}</p>`}`;
 }
 
@@ -272,6 +303,14 @@ $("#pay-list").onclick = (e) => {
   const b = e.target.closest("[data-rm]");
   if (b) applyPaid(L.removePayment(L.settle(readForm()), Number(b.dataset.rm)));
 };
+// Fills the amount with what is still owed; the payment is only recorded by "Record payment", so nothing is booked by accident.
+$("#pay-full").onclick = () => {
+  const bal = L.balanceOf(L.settle(readForm()));
+  $("#pay-err").textContent = bal > 0 ? "" : I.t("payBadAmt");
+  $("#pay-amt").value = bal > 0 ? String(bal) : "";
+  if (bal > 0) $("#pay-amt").focus();
+};
+$("#taxpresets").innerHTML = L.TAX_PRESETS.map((r) => `<option value="${r}">`).join("");
 
 function openEditor(inv) {
   editing = inv;
@@ -341,7 +380,7 @@ function newDoc(type, extra = {}) {
   const doc = {
     id: crypto.randomUUID(), type, number: L.nextNumber(invoices, type), from: last?.from ?? "", taxId: last?.taxId ?? "", client: "",
     currency: last?.currency ?? I.LANGS[I.getLang()].currency, issueDate: today(), dueDate: L.addDays(today(), type === "quote" ? 30 : 14),
-    taxRate: last?.taxRate ?? 0, withholdingRate: last?.withholdingRate ?? 0, discount: 0, paid: 0, payments: [], status: "draft", notes: "", payinfo: last?.payinfo ?? "", payLink: last?.payLink ?? "", clientEmail: "", recur: "", nextRun: "",
+    taxRate: last?.taxRate ?? 0, withholdingRate: last?.withholdingRate ?? 0, discount: 0, paid: 0, payments: [], status: "draft", notes: "", payinfo: last?.payinfo ?? "", payLink: last?.payLink ?? "", terms: type === "quote" ? "" : (last?.terms ?? I.t("termsDefault")), clientEmail: "", recur: "", nextRun: "",
     items: [{ desc: "", qty: 1, price: 0 }], lateFeePct: last?.lateFeePct ?? 0, ...extra,
   };
   openEditor(doc);
@@ -409,7 +448,12 @@ $("#btn-remind").onclick = async () => {
   try { await navigator.clipboard.writeText(text); toast(I.t("reminderCopied")); }
   catch { window.prompt(I.t("reminder"), text); }
 };
-$("#btn-add").onclick = () => $("#items").append(itemRow());
+// The new row takes focus, so keyboard users can type the description straight away.
+$("#btn-add").onclick = () => {
+  const row = itemRow();
+  $("#items").append(row);
+  row.querySelector('[data-k="desc"]').focus();
+};
 $("#form").addEventListener("input", renderPreview);
 $("#form").onsubmit = (e) => {
   e.preventDefault();
@@ -440,19 +484,39 @@ $("#btn-delete").onclick = () => {
   persist();
   closeEditor();
 };
+// A tick box inside a card selects the row for bulk changes; it must not open the card.
 const openCard = (e) => {
+  if (e.target.closest("input")) return;
   const c = e.target.closest(".card");
   if (c) openEditor(structuredClone(invoices.find((x) => x.id === c.dataset.id)));
 };
 $("#list").onclick = openCard;
-$("#list").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(e); } };
+$("#list").onkeydown = (e) => { if (!e.target.closest("input") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openCard(e); } };
+$("#list").onchange = (e) => {
+  const box = e.target.closest("[data-sel]");
+  if (!box) return;
+  if (box.checked) selected.add(box.dataset.sel); else selected.delete(box.dataset.sel);
+  renderBulk();
+};
+$("#bulk-clear").onclick = () => { selected.clear(); renderList(); };
+$("#bulk-all").onclick = () => { for (const id of shownIds) selected.add(id); renderList(); };
+$("#bulk-go").onclick = () => {
+  const before = invoices;
+  invoices = L.bulkStatus(invoices, activeSel(), $("#bulk-st").value);
+  const n = invoices.filter((x, k) => x !== before[k]).length;
+  selected.clear();
+  persist();
+  renderList();
+  toast(I.t("bulkDone", { n }));
+};
+$("#empty-new").onclick = () => $("#btn-new").click();
 $("#q").oninput = (e) => { filters.q = e.target.value; renderList(); };
 $("#f").onchange = (e) => { filters.f = e.target.value; renderList(); };
 $("#btn-dup").onclick = () => {
   const src = readForm();
   const copy = newDoc(src.type, {
     from: src.from, taxId: src.taxId, client: src.client, currency: src.currency, taxRate: src.taxRate, withholdingRate: src.withholdingRate, discount: src.discount,
-    notes: src.notes, payinfo: src.payinfo, payLink: src.payLink, clientEmail: src.clientEmail, lateFeePct: src.lateFeePct,
+    notes: src.notes, terms: src.terms, payinfo: src.payinfo, payLink: src.payLink, clientEmail: src.clientEmail, lateFeePct: src.lateFeePct,
     items: src.items.filter((x) => !x.lateFee).map((x) => ({ ...x })),
   });
   if (copy) toast(I.t("dupNote"));

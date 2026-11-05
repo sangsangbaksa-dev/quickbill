@@ -25,6 +25,12 @@ billing, CSV export, client ledger and overdue ageing.
 - Expected cash-in (Insights): open invoices are placed on the date each client usually pays (issue date plus their own average days, from dated payments), or on the due date for a client with no history. Shows the next three months, what comes later, and flags invoices expected after their due date (`clientHabits`, `expectedCash`). Computed on the device from your own records.
 - Registration number: an optional tax / business registration number (Japan qualified invoice T-number, Korean 사업자등록번호, VAT or tax ID) is remembered from invoice to invoice and printed beside your name on the invoice and the client link. QuickBill does not file e-tax invoices (전자세금계산서) or validate the number.
 - Upcoming recurring invoices: Insights lists the next 3 months of scheduled repeat invoices with an expected total per currency (`upcomingRecurring` in `logic.js`).
+- Tax-rate presets (free): the tax field suggests common VAT, GST and sales-tax rates (0 to 25%). Any other rate can still be typed (`TAX_PRESETS` in `logic.js`).
+- Full balance (free): "Fill in full balance" in the payment log puts the amount still owed into the amount field and the date is today. Nothing is booked until "Record payment" is pressed, so a part-payment is just a different amount typed in.
+- Payment terms note (free): each invoice has a "Payment terms" note, starting with a default text in the app's language. It prints on the invoice and shows on the client link (`terms` in the share snapshot). New quotes start empty.
+- Bulk status (free): tick invoices or quotes in the list and set them to sent, paid (invoices) or accepted (quotes). Paid amounts follow the status (`bulkStatus` in `logic.js`).
+- Recent activity (free): the dashboard lists the latest payments and issued documents, newest first, derived from saved records (`recentActivity` in `logic.js`). Nothing extra is stored.
+- Sticky totals (free): the editor keeps the total, the balance and, for an overdue invoice, the late fee the button would add today pinned at the top while you scroll.
 - English, Korean, Japanese, Chinese, Spanish with local currency/date formats.
 
 ## Selling it
@@ -52,6 +58,7 @@ Storage and safety:
 Everyday details:
 - With four or more invoices a search box and a status filter (all, unpaid, overdue, paid, quotes) appear above the list. Any invoice can be duplicated as a new draft.
 - Invoice and document cards work from the keyboard (Tab, Enter, Space).
+- Dark and light themes follow the system, including the browser's own date and number fields. Focus rings show on every control, and the invoice editor, item lines and payment log work at 360px wide. Print output is unchanged.
 - If the browser refuses to save (private window, full storage), a banner says so and points to Backup.
 - While `checkoutUrl` in `config.js` is still the placeholder, the upgrade dialog hides the buy button and says purchases are not open, instead of sending people to a dead link.
 

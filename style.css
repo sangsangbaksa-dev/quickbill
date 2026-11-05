@@ -6,9 +6,10 @@
 :root{
   --paper:#f3eee4; --ink:#211e18; --mute:#665e51; --rule:#d6cdb9; --line:#bfb49b; --accent:#a4401a; --danger:#b3261e; --sheet:#fffdf8;
   --serif:Newsreader,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  color-scheme:light;
 }
 @media(prefers-color-scheme:dark){
-  :root{--paper:#1a1814;--ink:#ece6d8;--mute:#9a917f;--rule:#38332a;--line:#4b4538;--accent:#e08a5c;--danger:#f08a80;--sheet:#fffdf8}
+  :root{--paper:#1a1814;--ink:#ece6d8;--mute:#9a917f;--rule:#38332a;--line:#4b4538;--accent:#e08a5c;--danger:#f08a80;--sheet:#fffdf8;color-scheme:dark}
 }
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--paper);color:var(--ink);font-variant-numeric:tabular-nums}
@@ -204,3 +205,40 @@ label.wide{grid-column:1/-1}label.wide small{display:block;margin-top:.25rem;tex
 #stmt-doc th,#stmt-doc td{padding:.4rem .3rem;border-bottom:1px solid var(--rule);text-align:left;font-size:.92rem}
 #stmt-doc .r{text-align:right}#stmt-doc .sub{font-size:.8rem;color:var(--mute)}
 @media print{body.print-stmt>*:not(#stmt){display:none!important}body.print-stmt #stmt{position:static;border:0;max-width:none;width:100%;padding:0;box-shadow:none}}
+
+/* polish: disabled buttons read as disabled, long client names wrap inside their row, and reduced motion is respected */
+button:disabled{opacity:.5;cursor:not-allowed}
+.card>div:first-of-type{min-width:0;overflow-wrap:anywhere}
+.card>.r{flex:0 0 auto;text-align:right}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+/* 360px phones: item lines stack description over qty / price / remove, the invoice paper keeps a narrow gutter */
+@media(max-width:480px){
+  .item{grid-template-columns:1fr 1fr auto}
+  .item input[data-k="desc"]{grid-column:1/-1}
+  #preview{padding:1rem}
+  #preview td,#preview th{padding:.3rem .2rem;font-size:.9rem}
+  #stmt-doc{overflow-x:auto}
+}
+
+/* round 2: rhythm, empty state, bulk bar, sticky totals, and paper that stays light in dark mode */
+main{padding:1.4rem 1.2rem 3rem}
+section>h2.h{margin:1.8rem 0 .5rem}
+.bar{background:var(--paper)}
+.empty{display:grid;justify-items:center;gap:.8rem;margin:1.4rem 0;padding:1.6rem 1.2rem;border:1px dashed var(--line);border-radius:8px;text-align:center}
+.empty p{margin:0;color:var(--mute)}
+.cardrow{display:flex;align-items:center;gap:.4rem;border-bottom:1px solid var(--rule)}
+.cardrow>.card{flex:1 1 auto;min-width:0;border-bottom:0}
+.selbox{display:inline-flex;align-items:center;flex:0 0 auto;padding-left:.2rem}
+.selbox input{width:auto;margin:0;accent-color:var(--accent)}
+.bulk{position:sticky;bottom:.6rem;z-index:3;align-items:center;margin:.8rem 0 0;padding:.6rem .8rem;background:var(--paper);border:1px solid var(--line);box-shadow:0 2px 0 var(--rule)}
+.bulk select{width:auto;min-width:8rem}
+.sticky-total{position:sticky;top:0;z-index:4;display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;align-items:baseline;margin:0 -.2rem .9rem;padding:.55rem .2rem;background:var(--paper);border-bottom:1px solid var(--rule)}
+.sticky-total:empty{display:none}
+.sticky-total span{font-size:.85rem;color:var(--mute)}
+.sticky-total b{color:var(--ink);font-size:1rem;font-weight:600}
+.sticky-total .late,.sticky-total .late b{color:var(--accent)}
+#activity{margin-top:.4rem}
+#activity td:first-child{white-space:nowrap;width:1%}
+#activity td{overflow-wrap:anywhere}
+#preview,.sheet-paper,#stmt-doc{color-scheme:light}
+#preview .terms,.vw-terms{margin-top:.8rem;font-size:.92rem}

@@ -39,6 +39,7 @@
     <div id="dash" class="cards"></div>
     <div id="fx"></div>
     <div id="clientsum"></div>
+    <div id="activity"></div>
     <div id="ageing"></div>
     <div id="filters" class="row filters" hidden>
       <input id="q" type="search" class="auto" data-i18n-ph="searchInv" data-i18n-aria="searchInv" autocomplete="off">
@@ -48,9 +49,16 @@
         <option value="quotes" data-i18n="fQuotes"></option>
       </select>
     </div>
+    <div id="bulk" class="row bulk" hidden>
+      <span id="bulk-n" class="muted"></span>
+      <select id="bulk-st" data-i18n-aria="status"><option value="sent" data-i18n="sent"></option><option value="paid" data-i18n="paid"></option></select>
+      <button type="button" id="bulk-go" class="primary" data-i18n="bulkApply"></button>
+      <button type="button" id="bulk-all" data-i18n="selAll"></button>
+      <button type="button" id="bulk-clear" data-i18n="bulkClear"></button>
+    </div>
     <div id="list"></div>
     <p class="muted" id="nomatch" data-i18n="noMatch" hidden></p>
-    <p class="muted" id="empty" data-i18n="empty"></p>
+    <div class="empty" id="empty"><p data-i18n="empty"></p><button type="button" class="primary" id="empty-new" data-i18n="newInvoice"></button></div>
     <details id="time" class="timebox">
       <summary data-i18n="timeTitle"></summary>
       <div class="timerow">
@@ -72,6 +80,7 @@
 
   <section id="edit-view" hidden>
     <form id="form" class="noprint">
+      <div id="sticky" class="sticky-total" aria-live="polite"></div>
       <div class="grid">
         <label><span data-i18n="from"></span><input name="from" required></label>
         <label><span data-i18n="taxIdLabel"></span><input name="taxId" maxlength="40" autocomplete="off" placeholder="T1234567890123 / 123-45-67890"></label>
@@ -84,7 +93,7 @@
           <select name="currency"><option>USD</option><option>EUR</option><option>GBP</option><option>KRW</option><option>JPY</option><option>CNY</option><option>CAD</option><option>AUD</option></select></label>
         <label><span data-i18n="issue"></span><input type="date" name="issueDate" required></label>
         <label><span id="due-lbl" data-i18n="due"></span><input type="date" name="dueDate" required></label>
-        <label><span data-i18n="tax"></span><input type="number" step="0.01" min="0" name="taxRate" value="0"></label>
+        <label><span data-i18n="tax"></span><input type="number" step="0.01" min="0" name="taxRate" value="0" list="taxpresets" inputmode="decimal"><datalist id="taxpresets"></datalist></label>
         <label><span data-i18n="discount"></span><input type="number" step="0.01" min="0" name="discount" value="0"></label>
         <label class="wide"><span data-i18n="whLabel"></span><input type="number" step="0.01" min="0" max="50" name="withholdingRate" value="0" list="whpresets" inputmode="decimal" aria-describedby="wh-hint"><datalist id="whpresets"><option value="0"></option><option value="3.3"></option><option value="10.21"></option></datalist><small id="wh-hint" class="muted" data-i18n="whHint"></small></label>
         <label><span data-i18n="status"></span>
@@ -101,6 +110,7 @@
         <div class="row paylog-add">
           <input type="date" id="pay-date" data-i18n-aria="payDate">
           <input type="number" id="pay-amt" min="0" step="any" inputmode="decimal" data-i18n-aria="payAmt" data-i18n-ph="payAmt">
+          <button type="button" id="pay-full" data-i18n="payFull"></button>
           <button type="button" id="pay-add" data-i18n="payAdd"></button>
         </div>
         <p id="pay-err" class="late" role="alert"></p>
@@ -110,6 +120,7 @@
       <button type="button" id="btn-add" data-i18n="addItem"></button>
       <label class="inline"><span data-i18n="lateFeePct"></span><input type="number" step="0.1" min="0" name="lateFeePct" value="0"></label>
       <label><span data-i18n="notes"></span><textarea name="notes" rows="2"></textarea></label>
+      <label><span data-i18n="termsL"></span><textarea name="terms" rows="2"></textarea></label>
       <label><span data-i18n="payinfo"></span><textarea name="payinfo" rows="2"></textarea></label>
       <div class="row">
         <button type="submit" class="primary" data-i18n="save"></button>
