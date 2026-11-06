@@ -269,3 +269,9 @@ section>h2.h{margin:1.8rem 0 .5rem}
     #new-row > button { flex: 1 1 auto; }
   }
 }
+
+.list-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+.list-tools #list-count{margin-right:auto;font-variant-numeric:tabular-nums}
+#filters{padding:14px;background:color-mix(in srgb,var(--ink) 3%,var(--paper));border:1px solid var(--line);border-radius:10px;margin-top:16px}
+@media(max-width:500px){.list-tools select{flex:1;max-width:100%}.list-tools #list-count{flex-basis:100%}#filters input{min-width:0;flex-basis:100%}}
+@media print{.list-tools{display:none}}

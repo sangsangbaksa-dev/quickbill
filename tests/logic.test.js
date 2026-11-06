@@ -408,3 +408,27 @@ test("recurring invoices number from invoices, not quotes", () => {
   const made = invoices.find((i) => i.id !== "q" && i.id !== "r");
   assert.equal(made.number, "INV-0002");
 });
+
+
+test("record sorting is stable, numeric and never changes stored order", () => {
+  const records = [
+    { id: "a", number: "INV-10", client: "Zoe", dueDate: "" },
+    { id: "b", number: "INV-2", client: "Amy", dueDate: "2026-12-02" },
+    { id: "c", number: "INV-3", client: "Amy", dueDate: "2026-11-01" },
+  ];
+  const before = JSON.stringify(records);
+  assert.deepEqual(L.sortInvoices(records, "due").map(x => x.id), ["c", "b", "a"]);
+  assert.deepEqual(L.sortInvoices(records, "number").map(x => x.id), ["b", "c", "a"]);
+  assert.deepEqual(L.sortInvoices(records, "client").map(x => x.id), ["b", "c", "a"]);
+  assert.deepEqual(L.sortInvoices(records, "saved"), records);
+  assert.equal(JSON.stringify(records), before);
+});
+
+
+test("search recognises canonically equivalent Korean and accented text without changing saved text", () => {
+  const list = [{number:"INV-1",client:"한글".normalize("NFD"),notes:"Café",items:[{desc:"디자인".normalize("NFD")}] }];
+  const before = JSON.stringify(list);
+  for (const q of ["한글", "Cafe\u0301", "  디자인  "]) assert.equal(L.filterInvoices(list, {q}).length, 1);
+  assert.equal(L.filterInvoices(list, {q:"Cafe"}).length, 0);
+  assert.equal(JSON.stringify(list), before);
+});

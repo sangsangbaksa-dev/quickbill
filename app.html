@@ -49,6 +49,14 @@
         <option value="quotes" data-i18n="fQuotes"></option>
       </select>
     </div>
+    <div id="list-tools" class="list-tools" hidden>
+      <span id="list-count" class="muted" role="status" aria-live="polite"></span>
+      <select id="list-sort" data-i18n-aria="sortRecords">
+        <option value="saved" data-i18n="sortSaved"></option><option value="due" data-i18n="sortDue"></option>
+        <option value="client" data-i18n="sortClient"></option><option value="number" data-i18n="sortNumber"></option>
+      </select>
+      <button id="clear-filters" type="button" data-i18n="clearFilters" hidden></button>
+    </div>
     <div id="bulk" class="row bulk" hidden>
       <span id="bulk-n" class="muted"></span>
       <select id="bulk-st" data-i18n-aria="status"><option value="sent" data-i18n="sent"></option><option value="paid" data-i18n="paid"></option></select>

@@ -37,6 +37,7 @@ const rawInvoices = store.get("qb.invoices", []);
 if (!Array.isArray(rawInvoices)) { try { localStorage.setItem("qb.invoices.bad", JSON.stringify(rawInvoices)); } catch {} }
 let invoices = Array.isArray(rawInvoices) ? rawInvoices : [];
 let filters = { q: "", f: "all" };
+let listSort = "saved";
 let selected = new Set(); // ids ticked in the list, for bulk status changes (not saved)
 let shownIds = []; // ids currently visible in the list; bulk changes only touch these
 try { localStorage.setItem("qb.probe", "1"); localStorage.removeItem("qb.probe"); } catch { document.addEventListener("DOMContentLoaded", () => ($("#store-warn").hidden = false)); }
@@ -67,8 +68,11 @@ function renderList() {
   $("#empty").hidden = invoices.length > 0;
   $("#clients").innerHTML = [...new Set(invoices.map((i) => i.client).filter(Boolean))]
     .map((c) => `<option value="${esc(c)}">`).join("");
-  $("#filters").hidden = invoices.length < 4;
-  const shown = invoices.length < 4 ? invoices : L.filterInvoices(invoices, filters, today());
+  $("#filters").hidden = !invoices.length;
+  const shown = L.sortInvoices(L.filterInvoices(invoices, filters, today()), listSort);
+  $("#list-tools").hidden = !invoices.length;
+  $("#list-count").textContent = I.t("shownRecords", { n: shown.length, total: invoices.length });
+  $("#clear-filters").hidden = !filters.q && filters.f === "all";
   shownIds = shown.map((i) => i.id);
   $("#nomatch").hidden = !(invoices.length && !shown.length);
   $("#list").innerHTML = shown.map((i) => {
@@ -510,6 +514,8 @@ $("#bulk-go").onclick = () => {
   toast(I.t("bulkDone", { n }));
 };
 $("#empty-new").onclick = () => $("#btn-new").click();
+$("#list-sort").onchange = (e) => { listSort = e.target.value; renderList(); };
+$("#clear-filters").onclick = () => { filters = { q: "", f: "all" }; $("#q").value = ""; $("#f").value = "all"; renderList(); $("#q").focus(); };
 $("#q").oninput = (e) => { filters.q = e.target.value; renderList(); };
 $("#f").onchange = (e) => { filters.f = e.target.value; renderList(); };
 $("#btn-dup").onclick = () => {

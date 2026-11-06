@@ -13,6 +13,7 @@ export const LANGS = {
 
 const D = {
   en: {
+    sortRecords: "Sort records", sortSaved: "Saved order", sortDue: "Due date first", sortClient: "Client A–Z", sortNumber: "Invoice number", shownRecords: "{n} of {total} records", clearFilters: "Clear filters",
     sheetDefault: "Sheet",
     empty: "No invoices yet. Create your first one.",
     backup: "Backup (JSON)", restore: "Restore backup",
@@ -508,6 +509,7 @@ const D = {
     footerNote: "Your data stays on your device unless you turn on optional cloud backup.",
   },
   ko: {
+    sortRecords: "기록 정렬", sortSaved: "저장된 순서", sortDue: "기한이 빠른 순", sortClient: "고객 이름순", sortNumber: "문서 번호순", shownRecords: "전체 {total}개 중 {n}개", clearFilters: "필터 초기화",
     sheetDefault: "시트",
     empty: "아직 인보이스가 없습니다. 첫 인보이스를 만들어 보세요.",
     backup: "백업 (JSON)", restore: "백업 복원",
@@ -1002,6 +1004,7 @@ const D = {
     footerNote: "클라우드 백업을 켜지 않으면 데이터는 기기 밖으로 나가지 않습니다.",
   },
   ja: {
+    sortRecords: "記録の並び順", sortSaved: "保存順", sortDue: "期限が近い順", sortClient: "顧客名順", sortNumber: "書類番号順", shownRecords: "全{total}件中{n}件", clearFilters: "絞り込みを解除",
     sheetDefault: "シート",
     empty: "請求書はまだありません。最初の1件を作成しましょう。",
     backup: "バックアップ (JSON)", restore: "バックアップを復元",
@@ -1496,6 +1499,7 @@ const D = {
     footerNote: "任意のクラウドバックアップを使わない限り、データは端末の外に出ません。",
   },
   zh: {
+    sortRecords: "记录排序", sortSaved: "保存顺序", sortDue: "到期日优先", sortClient: "客户名称", sortNumber: "单据编号", shownRecords: "共 {total} 条，显示 {n} 条", clearFilters: "清除筛选",
     sheetDefault: "表格",
     empty: "还没有账单，创建第一张吧。",
     backup: "备份 (JSON)", restore: "恢复备份",
@@ -1990,6 +1994,7 @@ const D = {
     footerNote: "除非启用可选的云备份，你的数据不会离开你的设备。",
   },
   es: {
+    sortRecords: "Ordenar registros", sortSaved: "Orden guardado", sortDue: "Vencimiento próximo", sortClient: "Cliente A–Z", sortNumber: "Número de documento", shownRecords: "{n} de {total} registros", clearFilters: "Limpiar filtros",
     sheetDefault: "Hoja",
     empty: "Aún no hay facturas. Crea la primera.",
     backup: "Copia de seguridad (JSON)", restore: "Restaurar copia",
