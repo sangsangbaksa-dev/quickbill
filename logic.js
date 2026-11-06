@@ -201,7 +201,7 @@ export function validInvoice(i) {
   return !!i && typeof i === "object" && typeof i.id === "string" && typeof i.number === "string" &&
     Array.isArray(i.items) && i.items.every((x) => x && typeof x === "object") &&
     ["draft", "sent", "paid", "accepted"].includes(i.status) && /^[A-Z]{3}$/.test(i.currency || "") &&
-    /^\d{4}-\d{2}-\d{2}$/.test(i.issueDate || "") && /^\d{4}-\d{2}-\d{2}$/.test(i.dueDate || "");
+    validDate(i.issueDate) && validDate(i.dueDate);
 }
 
 
@@ -340,8 +340,9 @@ export function netAfter({ gross, taxPct, feePct }) {
 // ---------- expenses, profit and a rough tax estimate ----------
 export const EXPENSE_LIMIT = 2000;
 export function validExpense(e) {
-  return !!e && typeof e.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(String(e.date || ""))
+  return !!e && typeof e.id === "string" && validDate(e.date)
     && typeof e.desc === "string" && e.desc.length <= 120
+    && (typeof e.amount === "number" || (typeof e.amount === "string" && e.amount.trim() !== ""))
     && Number(e.amount) >= 0 && Number.isFinite(Number(e.amount)) && typeof e.currency === "string"
     && (e.category === undefined || EXPENSE_CATEGORIES.includes(e.category));
 }
@@ -429,7 +430,11 @@ export function taxEstimate(profit, pct) {
 // ---- dated payments ----
 // `paid` stays the number everything else reads. The log only adds dates, so older invoices (no log) keep working
 // and a hand-typed "amount paid" is never overwritten.
-const validDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || "");
+const validDate = (d) => {
+  if (typeof d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const parsed = new Date(d + "T00:00:00Z");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === d;
+};
 export function recordPayment(inv, date, amount) {
   if (isQuote(inv) || !validDate(date)) return inv;
   const amt = Math.min(round2(Number(amount) || 0), balanceOf(inv));

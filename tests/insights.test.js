@@ -136,3 +136,11 @@ test("expense categories, quarters, year list and exports", () => {
   const rep = L.taxReportCSV(list, ex, 2026, "USD", 20).split("\n");
   assert.match(rep.at(-1), /"tax-set-aside","20%","","","190"/);
 });
+
+
+test("expense backups reject coerced numeric types and impossible dates", () => {
+  const expense = { id: "e", date: "2024-02-29", desc: "Test", amount: "12.5", currency: "USD" };
+  assert.equal(L.validExpense(expense), true);
+  for (const amount of [true, false, null, [], [12.5], {}, "", " "]) assert.equal(L.validExpense({ ...expense, amount }), false);
+  for (const date of ["2025-02-29", "2026-04-31"]) assert.equal(L.validExpense({ ...expense, date }), false);
+});

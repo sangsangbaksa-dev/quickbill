@@ -432,3 +432,13 @@ test("search recognises canonically equivalent Korean and accented text without 
   assert.equal(L.filterInvoices(list, {q:"Cafe"}).length, 0);
   assert.equal(JSON.stringify(list), before);
 });
+
+
+test("backup invoice dates must be real calendar dates", () => {
+  const inv = { id: "a", number: "INV-1", items: [], status: "draft", currency: "USD", issueDate: "2024-02-29", dueDate: "2024-03-01" };
+  assert.equal(L.validInvoice(inv), true);
+  for (const date of ["2025-02-29", "2026-04-31", "2026-00-01", "2026-13-01"]) {
+    assert.equal(L.validInvoice({ ...inv, issueDate: date }), false);
+    assert.equal(L.validInvoice({ ...inv, dueDate: date }), false);
+  }
+});
