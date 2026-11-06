@@ -15,6 +15,7 @@ function walk(dir) {
   }
 }
 walk(root);
+assert.ok(existsSync(join(root, '404.html')), 'Missing 404.html: Pages otherwise falls back to a successful SPA response');
 assert.ok(existsSync(join(root, '_headers')), 'Missing Pages security headers');
 assert.match(readFileSync(join(root, '_headers'), 'utf8'), /Content-Security-Policy:/i);
 function localTarget(file, ref) {

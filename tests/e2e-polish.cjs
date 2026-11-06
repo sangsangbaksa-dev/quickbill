@@ -5,6 +5,16 @@ const assert = require("node:assert/strict");
 const URL = "http://localhost:8123/app.html";
 (async () => {
   const b = await chromium.launch();
+  // This suite verifies the not-on-sale state, regardless of the live checkout configuration.
+  const makeContext = b.newContext.bind(b);
+  b.newContext = async options => {
+    const ctx = await makeContext(options);
+    await ctx.route('**/config.js', async route => {
+      const response = await route.fetch();
+      await route.fulfill({ response, body: (await response.text()).replace(/checkoutUrl:\s*"[^"]*"/, 'checkoutUrl: "https://example.com/checkout"') });
+    });
+    return ctx;
+  };
   const errs = [];
   const page = async (ctx) => {
     const p = await ctx.newPage();

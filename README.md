@@ -73,3 +73,7 @@ Tests: `npm test` (logic and storage), `node tests/e2e.cjs`, `node tests/e2e-pol
 - Steps that need the owner (payment account, domain, environment variables, tax questions) are in `docs/quickbill/launch-checklist.md`; announcement and pilot texts are in `docs/quickbill/copy.md`.
 
 Tests: also `node tests/e2e-license.cjs`, `node tests/e2e-site.cjs` and `node tests/e2e-share.cjs` (client link, payment log, remembered client, saved items).
+
+## 배포 전 검증
+
+설치·빌드·브라우저 검사·Cloudflare 배포 파일 구성은 [PREDEPLOY.md](PREDEPLOY.md)를 참고하세요. `codex/predeploy-2026-11-06` 브랜치의 검증 워크플로에는 배포 단계가 없습니다.

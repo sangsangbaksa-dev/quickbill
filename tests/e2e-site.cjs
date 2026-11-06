@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const BASE = "http://localhost:8123";
 const LANGS = ["en", "ko", "ja", "zh", "es"];
-const AXE = "/tmp/axe/node_modules/axe-core/axe.min.js"; // npm i axe-core --prefix /tmp/axe
+const AXE = require.resolve("axe-core/axe.min.js");
 const axe = fs.existsSync(AXE) ? fs.readFileSync(AXE, "utf8") : "";
 
 (async () => {
