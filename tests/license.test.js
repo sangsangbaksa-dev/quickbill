@@ -107,3 +107,11 @@ test("rate limit: one retry after Retry-After, then a 429 (never 'invalid'); ver
   const again = await check({ action: "validate", key: "good-key-0001" }, env, a);
   assert.equal(again.body.valid, true); assert.equal(a.n, 2); // served from cache
 });
+
+test('cached license verdict is scoped to the configured product', async () => {
+  const fetchImpl = fake(ok());
+  const body = { action: 'validate', key: 'good-key-0001' };
+  assert.equal((await check(body, { LEMONSQUEEZY_PRODUCT_ID: 'prod-1' }, fetchImpl)).body.valid, true);
+  assert.equal((await check(body, { LEMONSQUEEZY_PRODUCT_ID: 'prod-2' }, fetchImpl)).body.valid, false);
+  assert.equal(fetchImpl.calls.length, 2);
+});

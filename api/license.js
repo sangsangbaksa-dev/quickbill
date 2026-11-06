@@ -18,7 +18,13 @@ const usable = (j, env) => known(j) && ["active", "inactive"].includes(j.license
 // Lemon Squeezy rate-limits (60/min), and serverless/Pages functions share egress IPs, so a 429 is expected now and then.
 // Retry once after Retry-After (capped at 2s), and cache a verdict for a few minutes so repeat checks cost nothing.
 const CACHE_MS = 5 * 60e3;
-const cache = new Map(); // key -> { at, result }
+const cache = new Map(); // digest of product and key -> { at, result }; never the raw key
+const CACHE_MAX = 500;
+async function cacheId(key, env) {
+  const input = JSON.stringify([String(env?.LEMONSQUEEZY_PRODUCT_ID || ""), key]);
+  const bytes = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const _clearCache = () => cache.clear();
 
@@ -49,8 +55,10 @@ export async function check(body, env, fetchImpl = fetch) {
   const key = String(body?.key || "").trim();
   if (!KEY_RE.test(key)) return { code: 200, body: { configured: true, valid: false, reason: "format" } };
   if (body?.action !== "activate" && body?.action !== "validate") return { code: 400, body: { error: "action" } };
-  const hit = cache.get(key);
+  const id = await cacheId(key, env);
+  const hit = cache.get(id);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.result;
+  if (hit) cache.delete(id);
   try {
     const { status, json, retryAfter } = await verify(fetchImpl, env, key);
     // Rate limited: say so (not "invalid key"), so the browser keeps Pro and tries again later.
@@ -59,7 +67,9 @@ export async function check(body, env, fetchImpl = fetch) {
     if (!known(json)) return { code: 200, body: { configured: true, valid: false, reason: "unknown" } };
     if (!usable(json, env)) return { code: 200, body: { configured: true, valid: false, reason: "revoked" } };
     const result = { code: 200, body: { configured: true, valid: true, instance: "" } };
-    cache.set(key, { at: Date.now(), result });
+    for (const [k, entry] of cache) if (Date.now() - entry.at >= CACHE_MS) cache.delete(k);
+    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+    cache.set(id, { at: Date.now(), result });
     return result;
   } catch {
     return { code: 502, body: { configured: true, error: "upstream" } };
