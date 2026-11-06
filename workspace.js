@@ -144,8 +144,10 @@ export function initWorkspace(ctx) {
     const f = e.target.files[0];
     e.target.value = "";
     if (!f) return;
-    const rows = S.parseCSV(await f.text());
-    if (newSheet(f.name.replace(/\.csv$/i, ""), S.rowsToCells(rows))) renderSheets();
+    try {
+      const rows = S.parseCSV(await f.text());
+      if (newSheet(f.name.replace(/\.csv$/i, ""), S.rowsToCells(rows))) renderSheets();
+    } catch { toast(I.t("sheetImportBad")); }
   };
   $("#sh-invoice").onclick = () => {
     if (!isPro()) return openUpgrade(I.t("sheetInvPro"));

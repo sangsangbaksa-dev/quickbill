@@ -182,21 +182,33 @@ export function display(v) {
 // ---- CSV ----
 export function parseCSV(text) {
   const rows = [];
-  let row = [], cur = "", q = false;
-  const src = text.replace(/^﻿/, "");
+  let row = [], cur = "", quoted = false, closed = false, started = false;
+  const src = String(text ?? "").replace(/^\uFEFF/, "");
   for (let i = 0; i < src.length; i++) {
     const ch = src[i];
-    if (q) {
-      if (ch === '"') { if (src[i + 1] === '"') { cur += '"'; i++; } else q = false; }
-      else cur += ch;
-    } else if (ch === '"') q = true;
-    else if (ch === ",") { row.push(cur); cur = ""; }
-    else if (ch === "\n" || ch === "\r") {
-      if (ch === "\r" && src[i + 1] === "\n") i++;
-      row.push(cur); rows.push(row); row = []; cur = "";
-    } else cur += ch;
+    if (quoted) {
+      if (ch === '"') {
+        if (src[i + 1] === '"') { cur += '"'; i++; }
+        else { quoted = false; closed = true; }
+      } else cur += ch;
+      continue;
+    }
+    if (ch === "," || ch === "\n" || ch === "\r") {
+      row.push(cur); cur = ""; closed = false; started = true;
+      if (ch !== ",") {
+        if (ch === "\r" && src[i + 1] === "\n") i++;
+        rows.push(row); row = []; started = false;
+      }
+    } else if (ch === '"') {
+      if (cur || closed) throw new SyntaxError("Unexpected quote in CSV field");
+      quoted = true; started = true;
+    } else {
+      if (closed) throw new SyntaxError("Unexpected text after closing CSV quote");
+      cur += ch; started = true;
+    }
   }
-  if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+  if (quoted) throw new SyntaxError("Unclosed CSV quote");
+  if (started || row.length) { row.push(cur); rows.push(row); }
   return rows;
 }
 export function toCSV(rows) {
