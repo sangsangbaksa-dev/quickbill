@@ -5,10 +5,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const BASE = "http://localhost:8123";
 const LANGS = ["en", "ko", "ja", "zh", "es"];
-const AXE = "/tmp/axe/node_modules/axe-core/axe.min.js"; // npm i axe-core --prefix /tmp/axe
+const AXE = require.resolve("axe-core/axe.min.js");
 const axe = fs.existsSync(AXE) ? fs.readFileSync(AXE, "utf8") : "";
 
 (async () => {
+  const { CONFIG, isPlaceholder } = await import("../config.js");
+  const support = isPlaceholder(CONFIG.supportEmail) ? "[support email]" : CONFIG.supportEmail;
   const b = await chromium.launch();
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: "block" });
@@ -67,7 +69,7 @@ const axe = fs.existsSync(AXE) ? fs.readFileSync(AXE, "utf8") : "";
     await p.goto(`${BASE}/${page}`);
     assert.equal(await p.locator('article[data-l="en"] h1').textContent(), h1en);
     assert.ok(await p.locator('article[data-l="ko"]').isHidden());
-    assert.ok((await p.locator('article[data-l="en"]').innerText()).includes("[support email]"), "placeholder email shown while unset");
+    assert.ok((await p.locator('article[data-l="en"]').innerText()).includes(support), "legal contact follows config.js");
     if (page === "terms") assert.ok((await p.locator('article[data-l="en"]').innerText()).includes("14 days"));
     await p.click("#swlang");
     assert.equal(await p.locator('article[data-l="ko"] h1').textContent(), h1ko);

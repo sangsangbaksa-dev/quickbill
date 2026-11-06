@@ -9,7 +9,7 @@ const path = require("node:path");
 const BASE = "http://localhost:8124";
 
 (async () => {
-  const srv = spawn("node", [path.join(__dirname, "serve.cjs"), "8124"], { env: { ...process.env, QB_MOCK_LS: "1" }, stdio: "ignore" });
+  const srv = spawn("node", [path.join(__dirname, "serve.cjs"), "8124"], { env: { ...process.env, QB_MOCK_LS: "1", LEMONSQUEEZY_DISABLED: "" }, stdio: "ignore" });
   await new Promise((r) => setTimeout(r, 800));
   const b = await chromium.launch();
   const errs = [];

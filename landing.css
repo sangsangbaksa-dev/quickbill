@@ -127,3 +127,5 @@ html:lang(ja) body{line-break:strict}
 .hlmock b{font-family:var(--serif);font-size:1.25rem}
 .hlmock .hlsum{border-bottom:0;border-top:2px solid #211e18;margin-top:.4rem}.hlmock .hlsum b{color:#a4401a;font-size:1.7rem}
 @media(max-width:900px){.hl{grid-template-columns:1fr;gap:2rem}}
+
+@media(max-width:640px){.navin{flex-wrap:wrap;height:auto;min-height:3.6rem;padding-top:.4rem;padding-bottom:.4rem}}

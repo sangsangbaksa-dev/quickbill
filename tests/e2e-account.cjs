@@ -6,6 +6,12 @@ const URL = "http://localhost:8123/app";
   const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] }).catch(() => chromium.launch());
   const p = await b.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   const errs = []; p.on("pageerror", (e) => errs.push(String(e)));
+  // Exercise the device-only account form independently of the optional Supabase configuration.
+  await p.route('**/config.js', async route => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(/supabaseUrl:\s*"[^"]*"/, 'supabaseUrl: ""').replace(/supabaseKey:\s*"[^"]*"/, 'supabaseKey: ""');
+    await route.fulfill({ response, body });
+  });
   await p.goto(URL, { waitUntil: "load" });
   await p.evaluate(() => { localStorage.clear(); });
   await p.reload({ waitUntil: "load" });

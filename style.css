@@ -242,3 +242,30 @@ section>h2.h{margin:1.8rem 0 .5rem}
 #activity td{overflow-wrap:anywhere}
 #preview,.sheet-paper,#stmt-doc{color-scheme:light}
 #preview .terms,.vw-terms{margin-top:.8rem;font-size:.92rem}
+
+/* Workspace surfaces retain the editorial paper palette while making the next action clearer. */
+@media screen {
+  .bar { gap: .75rem; padding: .9rem max(1.2rem, calc((100vw - 1100px) / 2)); border-bottom: 1px solid var(--line); box-shadow: 0 3px 14px color-mix(in srgb, var(--ink) 5%, transparent); }
+  .tabs { gap: .3rem; padding: .25rem; background: color-mix(in srgb, var(--ink) 5%, transparent); border-radius: 9px; }
+  .tabs button { padding: 0 .85rem; }
+  .tabs button[aria-current="true"] { background: var(--paper); box-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 16%, transparent), inset 0 -2px 0 var(--accent); }
+  main { padding-top: 1.8rem; }
+  #new-row { align-items: center; margin-top: 0; }
+  #dash { gap: 1px; overflow: hidden; margin: 1rem 0 1.5rem; border: 1px solid var(--rule); border-radius: 10px; background: var(--rule); }
+  #dash .pc { padding: 1rem 1.1rem; background: var(--paper); }
+  #dash .pc p:first-child { font-size: .82rem; color: var(--mute); }
+  #dash .pc p:last-child { font-size: 1.2rem; font-weight: 600; }
+  .empty { margin-top: 1rem; padding: 2.5rem 1.2rem; background: color-mix(in srgb, var(--ink) 3%, var(--paper)); }
+  .cardrow { transition: background-color .15s ease; }
+  .cardrow:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  .card { padding: 1rem .55rem; }
+  .sheet-paper, #preview { box-shadow: 0 8px 28px color-mix(in srgb, #211e18 10%, transparent); }
+  dialog { padding: 1.5rem; border-color: var(--line); border-radius: 12px; box-shadow: 0 16px 60px #0004; }
+  @media (max-width: 600px) {
+    .bar { padding: .75rem 1rem; }
+    .tabs { padding: .2rem; }
+    main { padding: 1.2rem 1rem 3rem; }
+    #dash .pc { flex-basis: 42%; padding: .8rem; }
+    #new-row > button { flex: 1 1 auto; }
+  }
+}
