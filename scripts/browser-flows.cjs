@@ -1,0 +1,31 @@
+const assert = require('node:assert/strict');
+module.exports = async (page, base) => {
+  await page.addInitScript(() => {
+    const invoice = (id, client, number, dueDate) => ({ id, client, number, dueDate, type:'invoice', issueDate:'2026-11-01', status:'sent', currency:'USD', items:[{desc:'Design',qty:1,price:50}], paid:0, payments:[] });
+    localStorage.setItem('qb.lang','en');
+    localStorage.setItem('qb.tab', JSON.stringify('invoices'));
+    localStorage.setItem('qb.invoices',JSON.stringify([invoice('a','한글'.normalize('NFD'),'INV-10','2026-12-02'),invoice('b','Amy','INV-2','2026-11-02')]));
+  });
+  await page.goto(base+'/app');
+  await page.locator('#list .card').first().waitFor();
+  assert.equal(await page.locator('#list .card').count(),2);
+  const original = await page.evaluate(()=>localStorage.getItem('qb.invoices'));
+  await page.fill('#q','한글');
+  assert.equal(await page.locator('#list .card').count(),1);
+  assert.match(await page.textContent('#list-count'),/1 of 2/);
+  await page.fill('#q','missing student');
+  assert.equal(await page.locator('#list .card').count(),0);
+  await page.click('#clear-filters');
+  assert.equal(await page.locator('#list .card').count(),2);
+  assert.equal(await page.locator('#q').inputValue(),'');
+  await page.selectOption('#list-sort','number');
+  assert.match(await page.locator('#list .card').first().textContent(),/INV-2/);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('qb.invoices')),original);
+  await page.focus('[data-tab=invoices]');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.locator('#tab-sheets').isVisible(),true);
+  assert.equal(await page.locator('[data-tab=sheets]').evaluate(e=>e===document.activeElement),true);
+  await page.keyboard.press('Home');
+  assert.equal(await page.locator('#tab-invoices').isVisible(),true);
+  await page.screenshot({path:require('node:path').join(__dirname,'../artifacts/browser/functional-workspace.png'),fullPage:true});
+};

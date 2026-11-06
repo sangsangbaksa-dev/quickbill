@@ -256,8 +256,8 @@ export function timeItems(entries, client, rate) {
 // ---- list search and filters ----
 // f: all | unpaid | overdue | paid | quotes. q matches number, client, notes and line descriptions.
 export function filterInvoices(list, { q = "", f = "all" } = {}, today = new Date().toISOString().slice(0, 10)) {
-  const needle = String(q).trim().toLowerCase();
-  const has = (i) => !needle || [i.number, i.client, i.notes, ...(i.items || []).map((x) => x.desc)].some((s) => String(s ?? "").toLowerCase().includes(needle));
+  const needle = String(q).normalize("NFC").trim().toLowerCase();
+  const has = (i) => !needle || [i.number, i.client, i.notes, ...(i.items || []).map((x) => x.desc)].some((s) => String(s ?? "").normalize("NFC").toLowerCase().includes(needle));
   const ok = {
     all: () => true,
     unpaid: (i) => !isQuote(i) && i.status !== "draft" && balanceOf(i) > 0,
@@ -614,4 +614,12 @@ export function statementCSV(st) {
   const head = ["number", "issueDate", "dueDate", "total", "withheld", "paid", "balance"];
   const rows = st.rows.map((r) => [r.number, r.issueDate, r.dueDate, r.total, r.withheld, r.paid, r.balance].map(csvField).join(","));
   return [head.join(","), ...rows].join("\n");
+}
+
+// Ordering only changes the view; the stored list and export order are preserved.
+export function sortInvoices(invoices, order = "saved") {
+  const rows = invoices.slice();
+  if (order === "due") return rows.sort((a, b) => (a.dueDate || "9999-99-99").localeCompare(b.dueDate || "9999-99-99"));
+  if (order === "client" || order === "number") return rows.sort((a, b) => String(a[order] || "").localeCompare(String(b[order] || ""), undefined, { numeric: true, sensitivity: "base" }));
+  return rows;
 }

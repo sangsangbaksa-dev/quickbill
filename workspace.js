@@ -28,11 +28,26 @@ export function initWorkspace(ctx) {
       $(`#tab-${t}`).hidden = t !== name;
       const b = document.querySelector(`[data-tab="${t}"]`);
       b.setAttribute("aria-current", String(t === name));
+      b.tabIndex = t === name ? 0 : -1;
     }
     store.set("qb.tab", name);
     render();
   }
-  document.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => showTab(b.dataset.tab)));
+  document.querySelectorAll("[data-tab]").forEach((b) => {
+    b.onclick = () => showTab(b.dataset.tab);
+    b.onkeydown = (event) => {
+      const index = TABS.indexOf(b.dataset.tab);
+      let next = index;
+      if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
+      else if (event.key === "ArrowLeft") next = (index + TABS.length - 1) % TABS.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = TABS.length - 1;
+      else return;
+      event.preventDefault();
+      showTab(TABS[next]);
+      document.querySelector(`[data-tab="${TABS[next]}"]`).focus();
+    };
+  });
 
   // ---------- sheets ----------
   function newSheet(name, cells = {}) {
