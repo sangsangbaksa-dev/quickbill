@@ -60,3 +60,13 @@ test("sheet csv export keeps text formulas inert", () => {
 test("sheet csv export keeps text formulas inert", () => {
   assert.equal(S.toCSV([["=1+1", "-5", "+x", "ok"]]), "'=1+1,-5,'+x,ok");
 });
+
+
+test("CSV preserves quoted empty fields and rejects malformed quotes", () => {
+  assert.deepEqual(S.parseCSV('""'), [[""]]);
+  assert.deepEqual(S.parseCSV('"",'), [["", ""]]);
+  assert.deepEqual(S.parseCSV('"a\rb",c'), [["a\rb", "c"]]);
+  for (const text of ['"unterminated', 'a,"b', '"a"tail,b', 'ab"cd']) {
+    assert.throws(() => S.parseCSV(text), SyntaxError);
+  }
+});
