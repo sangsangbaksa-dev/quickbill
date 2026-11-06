@@ -139,9 +139,11 @@
         if (!tk) return { status: 'signed-out' };
         var data = opts.snapshot(), lh = hash(data), meta = read(MK);
         return fetchRemote(tk).then(function (remote) {
+          // A slow response must never overwrite edits made after the request began.
+          if (hash(opts.snapshot()) !== lh) return { status: 'conflict', remote: { updatedAt: remote && remote.updatedAt } };
           var act = decide(remote, meta, lh, !!(opts.isEmpty && opts.isEmpty(data)));
           if (act === 'in-sync') { if (remote) write(MK, { revision: remote.revision, hash: remote.hash, at: now() }); return { status: 'in-sync' }; }
-          if (act === 'pull') { write(MK, { revision: remote.revision, hash: remote.hash, at: now() }); opts.apply(remote.data); return { status: 'pulled' }; }
+          if (act === 'pull') { if (opts.apply(remote.data) === false) throw CloudError('apply'); write(MK, { revision: remote.revision, hash: remote.hash, at: now() }); return { status: 'pulled' }; }
           if (act === 'conflict') return { status: 'conflict', remote: { updatedAt: remote.updatedAt } };
           return pushRow(tk, data, act === 'push' ? remote.revision : null).then(function (rev) {
             write(MK, { revision: rev, hash: lh, at: now() }); return { status: 'pushed' };
@@ -156,12 +158,14 @@
     }
     /* Both sides changed: the user picks. 'device' overwrites the cloud copy, 'cloud' replaces this device's data. */
     function resolve(choice) {
+      var initialHash = hash(opts.snapshot());
       return token().then(function (tk) {
         if (!tk) return { status: 'signed-out' };
         return fetchRemote(tk).then(function (remote) {
+          if (hash(opts.snapshot()) !== initialHash) return { status: 'conflict', remote: { updatedAt: remote && remote.updatedAt } };
           if (choice === 'cloud') {
             if (!remote) return { status: 'in-sync' };
-            write(MK, { revision: remote.revision, hash: remote.hash, at: now() }); opts.apply(remote.data); return { status: 'pulled' };
+            if (opts.apply(remote.data) === false) throw CloudError('apply'); write(MK, { revision: remote.revision, hash: remote.hash, at: now() }); return { status: 'pulled' };
           }
           var data = opts.snapshot(), lh = hash(data);
           return pushRow(tk, data, remote ? remote.revision : null).then(function (rev) { write(MK, { revision: rev, hash: lh, at: now() }); return { status: 'pushed' }; });
