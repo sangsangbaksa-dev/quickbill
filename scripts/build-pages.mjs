@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
-const SKIP_DIRS = new Set(["tests", "design", "api", "functions", "scripts", "node_modules", "dist", ".git", ".wrangler"]);
+const PUBLIC_DIRS = new Set(["fonts", "ko", "ja", "zh", "es"]);
 const SKIP_FILES = new Set(["package.json", "package-lock.json", "vercel.json", ".vercelignore", "landing.src.html", "README.md", "wrangler.toml"]);
 
 rmSync(out, { recursive: true, force: true });
@@ -16,8 +16,9 @@ let n = 0;
 (function walk(dir) {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) { if (!SKIP_DIRS.has(name)) walk(p); continue; }
-    if (SKIP_FILES.has(name) || name.startsWith("_")) continue;
+    if (statSync(p).isDirectory()) { if (dir === root ? PUBLIC_DIRS.has(name) : !name.startsWith(".")) walk(p); continue; }
+    if (SKIP_FILES.has(name) || name.startsWith(".") || name.startsWith("_")) continue;
+    if (dir === root && !/\.(html|js|css|svg|png)$/.test(name) && !["manifest.json", "robots.txt", "sitemap.xml"].includes(name)) continue;
     const to = join(out, relative(root, p));
     mkdirSync(dirname(to), { recursive: true });
     cpSync(p, to);

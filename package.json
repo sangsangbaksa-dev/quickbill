@@ -3,6 +3,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "build": "node scripts/build-pages.mjs",
-    "seo": "node design/seo.cjs"
+    "seo": "node design/seo.cjs",
+    "check": "npm test && npm run build && node scripts/check-dist.mjs"
   }
 }
