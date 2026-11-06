@@ -21,7 +21,7 @@ const cloud = globalThis.CloudSync?.create({
   url: CONFIG.supabaseUrl, anonKey: CONFIG.supabaseKey, app: "quickbill", storage: localStorage, device: (navigator.platform || "web").slice(0, 60),
   snapshot: () => CD.snapshot(localStorage),
   isEmpty: (snap) => CD.isEmpty(snap),
-  apply: (snap) => { if (CD.apply(localStorage, snap)) location.reload(); },
+  apply: (snap) => { if (!CD.apply(localStorage, snap)) return false; location.reload(); return true; },
   onResult: (r) => { if (r.status === "pushed") toast(globalThis.CloudI18n.t(I.getLang(), "pushed")); },
 });
 
