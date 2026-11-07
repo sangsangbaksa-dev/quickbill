@@ -1,4 +1,4 @@
-import { balanceOf, isQuote, dayDiff } from "./logic.js";
+import { balanceOf, isQuote, dayDiff, addDays } from "./logic.js";
 
 export const DEFAULT_SCHEDULE = { before: [3], due: true, after: [1, 7, 14, 30] };
 
@@ -34,4 +34,22 @@ export function markReminded(inv, today) {
   const existing = Array.isArray(inv.reminders) ? inv.reminders : [];
   const reminders = existing.includes(today) ? [...existing] : [...existing, today];
   return { ...inv, reminders };
+}
+
+// Upcoming reminder dates for `inv` from `today` on (inclusive), earliest first, at most `limit`.
+// Uses the same rules as reminderDue and skips dates already marked as reminded. Nothing is sent or stored.
+export function reminderPlan(inv, today, schedule = DEFAULT_SCHEDULE, limit = 3) {
+  const isDate = (d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d);
+  if (!inv || isQuote(inv) || inv.status === "draft" || !isDate(inv.dueDate) || !isDate(today)) return [];
+  if (balanceOf(inv) <= 0) return [];
+  const steps = [];
+  for (const d of schedule.before ?? []) steps.push({ kind: "before", days: d, offset: -d });
+  if (schedule.due) steps.push({ kind: "due", days: 0, offset: 0 });
+  for (const d of schedule.after ?? []) steps.push({ kind: "after", days: d, offset: d });
+  const sent = Array.isArray(inv.reminders) ? inv.reminders : [];
+  return steps
+    .map((s) => ({ kind: s.kind, days: s.days, date: addDays(inv.dueDate, s.offset) }))
+    .filter((s) => s.date >= today && !sent.includes(s.date))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+    .slice(0, Math.max(0, limit));
 }

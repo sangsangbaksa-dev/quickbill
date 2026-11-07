@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_SCHEDULE, reminderDue, remindersToday, markReminded } from "../reminders.js";
+import { DEFAULT_SCHEDULE, reminderDue, remindersToday, markReminded, reminderPlan } from "../reminders.js";
 import { addDays } from "../logic.js";
 
 const TODAY = "2026-05-10";
@@ -113,4 +113,35 @@ test("inputs are not mutated", () => {
   assert.deepEqual(schedule, scheduleSnapshot);
   assert.notEqual(marked, inv);
   assert.deepEqual(marked.reminders, ["2026-05-01", TODAY]);
+});
+
+test("reminderPlan: upcoming dates follow the same schedule as reminderDue, earliest first", () => {
+  const inv = base({ dueDate: "2026-05-20" });
+  const plan = reminderPlan(inv, TODAY, DEFAULT_SCHEDULE, 10);
+  assert.deepEqual(plan, [
+    { kind: "before", days: 3, date: "2026-05-17" },
+    { kind: "due", days: 0, date: "2026-05-20" },
+    { kind: "after", days: 1, date: "2026-05-21" },
+    { kind: "after", days: 7, date: "2026-05-27" },
+    { kind: "after", days: 14, date: "2026-06-03" },
+    { kind: "after", days: 30, date: "2026-06-19" },
+  ]);
+  // Every planned date is a date reminderDue would report on that day.
+  for (const step of plan) assert.equal(reminderDue(inv, step.date)?.kind, step.kind);
+});
+
+test("reminderPlan: skips past dates, already-reminded dates, paid, draft and quote invoices", () => {
+  const inv = base({ dueDate: "2026-05-20", reminders: ["2026-05-17"] });
+  assert.deepEqual(reminderPlan(inv, "2026-05-18", DEFAULT_SCHEDULE, 2).map((s) => s.date), ["2026-05-20", "2026-05-21"]);
+  assert.deepEqual(reminderPlan(base({ dueDate: TODAY, paid: 100 }), TODAY), []);
+  assert.deepEqual(reminderPlan(base({ status: "draft" }), TODAY), []);
+  assert.deepEqual(reminderPlan(base({ type: "quote" }), TODAY), []);
+  assert.deepEqual(reminderPlan(base({ dueDate: "" }), TODAY), []);
+  assert.deepEqual(reminderPlan(null, TODAY), []);
+});
+
+test("reminderPlan: default limit is 3 and bad input never throws", () => {
+  assert.equal(reminderPlan(base({ dueDate: "2026-05-20" }), TODAY).length, 3);
+  assert.deepEqual(reminderPlan(base({ dueDate: "2026-05-20" }), "not-a-date"), []);
+  assert.deepEqual(reminderPlan(base({ dueDate: "2026-05-20" }), TODAY, DEFAULT_SCHEDULE, 0), []);
 });

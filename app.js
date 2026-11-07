@@ -2,6 +2,7 @@ import * as L from "./logic.js";
 import * as I from "./i18n.js";
 import { CONFIG, checkoutLive } from "./config.js";
 import * as LS from "./license.js";
+import { reminderPlan } from "./reminders.js";
 import { initWorkspace } from "./workspace.js";
 import { ensureSchema } from "./storage.js";
 import { createAuth, localBackend } from "./auth.js";
@@ -272,6 +273,7 @@ function renderPreview() {
   $("#btn-email").hidden = !CL.validEmail(i.clientEmail);
   // Sticky strip at the top of the editor: totals always in view, plus the late fee the button would add today.
   const fee = !L.isQuote(i) && late ? L.lateFeeAmount({ ...i, items: i.items.filter((x) => !x.lateFee) }, today(), i.lateFeePct) : 0;
+  $("#remind-plan").textContent = remindPlanText(i);
   $("#sticky").innerHTML = `<span>${I.t("total")} <b>${m(t.total)}</b></span>${L.isQuote(i) ? "" : `<span>${I.t("balance")} <b>${m(L.balanceOf(i))}</b></span>`}${fee ? `<span class="late">${I.t("lateFeeNow")} ${m(fee)}</span>` : ""}`;
   const showLogo = logo && isPro();
   $("#btn-logo-rm").hidden = !logo;
@@ -738,3 +740,11 @@ $("#stmt-close").onclick = () => $("#stmt").close();
 $("#stmt-csv").onclick = () => { if (stmtOpen) download(`statement-${stmtOpen.client.replace(/[^\w-]+/g, "_")}.csv`, "text/csv", L.statementCSV(stmtOpen)); };
 $("#stmt-print").onclick = () => { document.body.classList.add("print-stmt"); window.print(); };
 window.addEventListener("afterprint", () => document.body.classList.remove("print-stmt"));
+
+// One line under the due date: the next reminder dates for this invoice (a plan only; nothing is sent).
+function remindPlanText(inv) {
+  const steps = reminderPlan(inv, today(), undefined, 3);
+  if (!steps.length) return "";
+  const label = (s) => (s.kind === "due" ? I.t("remindDue") : I.t(s.kind === "before" ? "remindBefore" : "remindAfter", { d: s.days }));
+  return `${I.t("remindPlan")} ${steps.map((s) => `${label(s)} (${I.formatDate(s.date)})`).join(" · ")}`;
+}
